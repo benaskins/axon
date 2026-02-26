@@ -17,6 +17,7 @@ type serverConfig struct {
 	tlsCert       string
 	tlsKey        string
 	drainTimeout  time.Duration
+	hookTimeout   time.Duration
 }
 
 // ServerOption configures ListenAndServe behavior.
@@ -55,11 +56,20 @@ func WithDrainTimeout(d time.Duration) ServerOption {
 	}
 }
 
+// WithHookTimeout sets the maximum time to wait for shutdown hooks
+// to complete. Defaults to 10 seconds.
+func WithHookTimeout(d time.Duration) ServerOption {
+	return func(c *serverConfig) {
+		c.hookTimeout = d
+	}
+}
+
 // ListenAndServe starts an HTTP server and blocks until SIGINT or SIGTERM.
 // Performs graceful shutdown: runs shutdown hooks, then drains connections.
 func ListenAndServe(port string, handler http.Handler, opts ...ServerOption) {
 	cfg := &serverConfig{
 		drainTimeout: 30 * time.Second,
+		hookTimeout:  10 * time.Second,
 	}
 	for _, opt := range opts {
 		opt(cfg)
@@ -91,15 +101,19 @@ func ListenAndServe(port string, handler http.Handler, opts ...ServerOption) {
 	<-ctx.Done()
 	slog.Info("shutting down...")
 
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.drainTimeout)
-	defer cancel()
+	// Phase 1: run shutdown hooks with their own timeout
+	hookCtx, hookCancel := context.WithTimeout(context.Background(), cfg.hookTimeout)
+	defer hookCancel()
 
-	// Run shutdown hooks before draining
 	for _, hook := range cfg.shutdownHooks {
-		hook(shutdownCtx)
+		hook(hookCtx)
 	}
 
-	if err := srv.Shutdown(shutdownCtx); err != nil {
+	// Phase 2: drain in-flight requests
+	drainCtx, drainCancel := context.WithTimeout(context.Background(), cfg.drainTimeout)
+	defer drainCancel()
+
+	if err := srv.Shutdown(drainCtx); err != nil {
 		slog.Error("shutdown error", "error", err)
 	}
 

@@ -9,7 +9,7 @@ import (
 	"os"
 	"strings"
 
-	_ "github.com/lib/pq"
+	"github.com/lib/pq"
 	"github.com/pressly/goose/v3"
 )
 
@@ -39,7 +39,7 @@ func OpenDB(dsn, schema string) (*sql.DB, error) {
 		return nil, fmt.Errorf("ping database: %w", err)
 	}
 
-	if _, err := db.Exec(fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s", schema)); err != nil {
+	if _, err := db.Exec("CREATE SCHEMA IF NOT EXISTS " + pq.QuoteIdentifier(schema)); err != nil {
 		db.Close()
 		return nil, fmt.Errorf("create schema %s: %w", schema, err)
 	}
@@ -81,18 +81,25 @@ func appendSearchPath(dsn, schema string) string {
 // RunMigrations runs goose SQL migrations from an embedded filesystem.
 // The migrations FS should embed a "migrations" directory containing SQL files
 // (e.g., //go:embed migrations/*.sql).
-func RunMigrations(db *sql.DB, migrationsFS embed.FS) {
+func RunMigrations(db *sql.DB, migrationsFS embed.FS) error {
 	goose.SetBaseFS(migrationsFS)
 
 	if err := goose.SetDialect("postgres"); err != nil {
-		slog.Error("failed to set goose dialect", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("set goose dialect: %w", err)
 	}
 
 	if err := goose.Up(db, "migrations"); err != nil {
-		slog.Error("failed to run migrations", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("run migrations: %w", err)
 	}
 
 	slog.Info("database migrations complete")
+	return nil
+}
+
+// MustRunMigrations runs goose SQL migrations and exits the process on failure.
+func MustRunMigrations(db *sql.DB, migrationsFS embed.FS) {
+	if err := RunMigrations(db, migrationsFS); err != nil {
+		slog.Error("failed to run migrations", "error", err)
+		os.Exit(1)
+	}
 }

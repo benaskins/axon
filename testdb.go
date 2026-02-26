@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	_ "github.com/lib/pq"
+	"github.com/lib/pq"
 )
 
 // OpenTestDB creates a unique PostgreSQL schema for test isolation.
@@ -27,13 +27,16 @@ func OpenTestDB(t *testing.T, dsn string, migrations embed.FS) *sql.DB {
 	db.SetMaxOpenConns(1)
 	db.SetMaxIdleConns(1)
 
-	RunMigrations(db, migrations)
+	if err := RunMigrations(db, migrations); err != nil {
+		db.Close()
+		t.Fatalf("failed to run migrations: %v", err)
+	}
 
 	t.Cleanup(func() {
 		db.Close()
 		cleanDB, err := sql.Open("postgres", dsn)
 		if err == nil {
-			cleanDB.Exec(fmt.Sprintf("DROP SCHEMA %s CASCADE", schema))
+			cleanDB.Exec("DROP SCHEMA " + pq.QuoteIdentifier(schema) + " CASCADE")
 			cleanDB.Close()
 		}
 	})
