@@ -9,7 +9,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/lib/pq"
+	"github.com/jackc/pgx/v5"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
 )
 
@@ -29,7 +30,7 @@ func MustOpenDB(dsn, schema string) *sql.DB {
 // and sets the search_path via the DSN so it applies to all pooled connections.
 func OpenDB(dsn, schema string) (*sql.DB, error) {
 	// First open a temporary connection to create the schema
-	db, err := sql.Open("postgres", dsn)
+	db, err := sql.Open("pgx", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("open database: %w", err)
 	}
@@ -39,7 +40,7 @@ func OpenDB(dsn, schema string) (*sql.DB, error) {
 		return nil, fmt.Errorf("ping database: %w", err)
 	}
 
-	if _, err := db.Exec("CREATE SCHEMA IF NOT EXISTS " + pq.QuoteIdentifier(schema)); err != nil {
+	if _, err := db.Exec("CREATE SCHEMA IF NOT EXISTS " + pgx.Identifier{schema}.Sanitize()); err != nil {
 		db.Close()
 		return nil, fmt.Errorf("create schema %s: %w", schema, err)
 	}
@@ -47,7 +48,7 @@ func OpenDB(dsn, schema string) (*sql.DB, error) {
 
 	// Reopen with search_path baked into the DSN so every pooled connection uses it
 	dsnWithSchema := appendSearchPath(dsn, schema)
-	db, err = sql.Open("postgres", dsnWithSchema)
+	db, err = sql.Open("pgx", dsnWithSchema)
 	if err != nil {
 		return nil, fmt.Errorf("open database with search_path: %w", err)
 	}

@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lib/pq"
+	"github.com/jackc/pgx/v5"
 )
 
 // OpenTestDB creates a unique PostgreSQL schema for test isolation.
@@ -34,9 +34,9 @@ func OpenTestDB(t *testing.T, dsn string, migrations embed.FS) *sql.DB {
 
 	t.Cleanup(func() {
 		db.Close()
-		cleanDB, err := sql.Open("postgres", dsn)
+		cleanDB, err := sql.Open("pgx", dsn)
 		if err == nil {
-			cleanDB.Exec("DROP SCHEMA " + pq.QuoteIdentifier(schema) + " CASCADE")
+			cleanDB.Exec("DROP SCHEMA " + pgx.Identifier{schema}.Sanitize() + " CASCADE")
 			cleanDB.Close()
 		}
 	})
