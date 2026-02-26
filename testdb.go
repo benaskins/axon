@@ -17,7 +17,7 @@ import (
 func OpenTestDB(t *testing.T, dsn string, migrations embed.FS) *sql.DB {
 	t.Helper()
 
-	schema := fmt.Sprintf("test_%d_%d", time.Now().UnixNano(), rand.Int())
+	schema := fmt.Sprintf("test_%d_%d", time.Now().UnixNano(), rand.Int()) // #nosec G404 -- test-only schema name, not security-sensitive
 
 	db, err := OpenDB(dsn, schema)
 	if err != nil {

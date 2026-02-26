@@ -199,7 +199,7 @@ func LoadClientTLSConfig() (*tls.Config, error) {
 		return nil, fmt.Errorf("load client cert: %w", err)
 	}
 
-	caCert, err := os.ReadFile(caFile)
+	caCert, err := os.ReadFile(caFile) // #nosec G304 G703 -- path from operator-controlled env vars, not user input
 	if err != nil {
 		return nil, fmt.Errorf("read CA cert: %w", err)
 	}
@@ -236,7 +236,7 @@ func (ac *AuthClient) ValidateSession(sessionToken string) (*SessionInfo, error)
 
 	ac.config.tokenSender(req, sessionToken)
 
-	resp, err := ac.httpClient.Do(req)
+	resp, err := ac.httpClient.Do(req) // #nosec G704 -- URL from service config, not user input
 	if err != nil {
 		slog.Error("auth service unavailable", "error", err)
 		return nil, ErrServiceUnavailable
