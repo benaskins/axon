@@ -13,10 +13,12 @@ const (
 	UserIDKey contextKey = "user_id"
 	// UsernameKey is the context key for the authenticated user's username.
 	UsernameKey contextKey = "username"
+	// SessionInfoKey is the context key for the full SessionInfo.
+	SessionInfoKey contextKey = "session_info"
 )
 
 type authConfig struct {
-	cookieName string
+	tokenExtractor func(*http.Request) (string, error)
 }
 
 // AuthOption configures RequireAuth behavior.
@@ -25,29 +27,49 @@ type AuthOption func(*authConfig)
 // WithCookieName sets the session cookie name. Defaults to "session".
 func WithCookieName(name string) AuthOption {
 	return func(c *authConfig) {
-		c.cookieName = name
+		c.tokenExtractor = cookieExtractor(name)
 	}
 }
 
-// RequireAuth returns middleware that validates session cookies via the AuthClient.
-// On success, sets UserIDKey and UsernameKey in the request context.
+// WithTokenExtractor sets a custom function to extract the session token
+// from the request. Overrides the default cookie-based extraction.
+func WithTokenExtractor(fn func(*http.Request) (string, error)) AuthOption {
+	return func(c *authConfig) {
+		c.tokenExtractor = fn
+	}
+}
+
+func cookieExtractor(name string) func(*http.Request) (string, error) {
+	return func(r *http.Request) (string, error) {
+		cookie, err := r.Cookie(name)
+		if err != nil {
+			return "", err
+		}
+		return cookie.Value, nil
+	}
+}
+
+// RequireAuth returns middleware that validates session tokens via a SessionValidator.
+// On success, sets UserIDKey, UsernameKey, and SessionInfoKey in the request context.
 // On failure, responds with 401 or 503.
-func RequireAuth(ac *AuthClient, opts ...AuthOption) func(http.Handler) http.Handler {
-	cfg := &authConfig{cookieName: "session"}
+func RequireAuth(sv SessionValidator, opts ...AuthOption) func(http.Handler) http.Handler {
+	cfg := &authConfig{
+		tokenExtractor: cookieExtractor("session"),
+	}
 	for _, opt := range opts {
 		opt(cfg)
 	}
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			cookie, err := r.Cookie(cfg.cookieName)
+			token, err := cfg.tokenExtractor(r)
 			if err != nil {
-				slog.Warn("auth: no session cookie", "path", r.URL.Path)
+				slog.Warn("auth: no session token", "path", r.URL.Path)
 				WriteError(w, http.StatusUnauthorized, "unauthorized")
 				return
 			}
 
-			session, err := ac.ValidateSession(cookie.Value)
+			session, err := sv.ValidateSession(token)
 			if err != nil {
 				slog.Warn("auth: session validation failed", "path", r.URL.Path, "error", err)
 				if err == ErrServiceUnavailable {
@@ -60,8 +82,9 @@ func RequireAuth(ac *AuthClient, opts ...AuthOption) func(http.Handler) http.Han
 				return
 			}
 
-			ctx := context.WithValue(r.Context(), UserIDKey, session.UserID)
-			ctx = context.WithValue(ctx, UsernameKey, session.Username)
+			ctx := context.WithValue(r.Context(), SessionInfoKey, session)
+			ctx = context.WithValue(ctx, UserIDKey, session.UserID())
+			ctx = context.WithValue(ctx, UsernameKey, session.Username())
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
@@ -78,5 +101,12 @@ func UserID(ctx context.Context) string {
 // Returns empty string if not present.
 func Username(ctx context.Context) string {
 	v, _ := ctx.Value(UsernameKey).(string)
+	return v
+}
+
+// Session extracts the full SessionInfo from the request context.
+// Returns nil if not present.
+func Session(ctx context.Context) *SessionInfo {
+	v, _ := ctx.Value(SessionInfoKey).(*SessionInfo)
 	return v
 }

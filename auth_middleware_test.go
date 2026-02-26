@@ -16,7 +16,7 @@ func TestRequireAuth_NoCookie(t *testing.T) {
 	defer mockAuth.Close()
 
 	client := axon.NewAuthClientPlain(mockAuth.URL)
-	defer client.StopSweep()
+	defer client.Close()
 
 	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t.Error("inner handler should not be called")
@@ -43,7 +43,7 @@ func TestRequireAuth_ValidSession(t *testing.T) {
 	defer mockAuth.Close()
 
 	client := axon.NewAuthClientPlain(mockAuth.URL)
-	defer client.StopSweep()
+	defer client.Close()
 
 	var gotUserID, gotUsername string
 	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -76,7 +76,7 @@ func TestRequireAuth_InvalidSession(t *testing.T) {
 	defer mockAuth.Close()
 
 	client := axon.NewAuthClientPlain(mockAuth.URL)
-	defer client.StopSweep()
+	defer client.Close()
 
 	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t.Error("inner handler should not be called")
@@ -95,7 +95,7 @@ func TestRequireAuth_InvalidSession(t *testing.T) {
 
 func TestRequireAuth_ServiceUnavailable(t *testing.T) {
 	client := axon.NewAuthClientPlain("http://localhost:99999")
-	defer client.StopSweep()
+	defer client.Close()
 
 	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t.Error("inner handler should not be called")
@@ -123,7 +123,7 @@ func TestRequireAuth_CustomCookieName(t *testing.T) {
 	defer mockAuth.Close()
 
 	client := axon.NewAuthClientPlain(mockAuth.URL)
-	defer client.StopSweep()
+	defer client.Close()
 
 	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
