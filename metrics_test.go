@@ -13,7 +13,10 @@ func TestRequestMetrics_IncreasesCounter(t *testing.T) {
 		w.WriteHeader(200)
 	})
 
-	handler := axon.RequestMetrics(inner)
+	mux := http.NewServeMux()
+	mux.Handle("GET /test", inner)
+
+	handler := axon.RequestMetrics(mux)
 	req := httptest.NewRequest("GET", "/test", nil)
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)

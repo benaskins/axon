@@ -6,19 +6,19 @@ import (
 	"time"
 )
 
-// ResponseWriter wraps http.ResponseWriter to capture the status code.
-type ResponseWriter struct {
+// responseWriter wraps http.ResponseWriter to capture the status code.
+type responseWriter struct {
 	http.ResponseWriter
-	StatusCode int
+	statusCode int
 }
 
-func (rw *ResponseWriter) WriteHeader(code int) {
-	rw.StatusCode = code
+func (rw *responseWriter) WriteHeader(code int) {
+	rw.statusCode = code
 	rw.ResponseWriter.WriteHeader(code)
 }
 
 // Flush implements http.Flusher for SSE support.
-func (rw *ResponseWriter) Flush() {
+func (rw *responseWriter) Flush() {
 	if f, ok := rw.ResponseWriter.(http.Flusher); ok {
 		f.Flush()
 	}
@@ -29,12 +29,12 @@ func RequestLogging(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		path := r.URL.Path
-		rw := &ResponseWriter{ResponseWriter: w, StatusCode: http.StatusOK}
+		rw := &responseWriter{ResponseWriter: w, statusCode: http.StatusOK}
 		next.ServeHTTP(rw, r)
 		slog.Info("request",
 			"method", r.Method,
 			"path", path,
-			"status", rw.StatusCode,
+			"status", rw.statusCode,
 			"duration", time.Since(start).String(),
 		)
 	})

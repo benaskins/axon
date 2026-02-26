@@ -40,13 +40,16 @@ func MetricsHandler() http.Handler {
 func RequestMetrics(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-		rw := &ResponseWriter{ResponseWriter: w, StatusCode: http.StatusOK}
+		rw := &responseWriter{ResponseWriter: w, statusCode: http.StatusOK}
 		next.ServeHTTP(rw, r)
 
 		duration := time.Since(start).Seconds()
-		path := r.URL.Path
+		path := r.Pattern
+		if path == "" {
+			path = r.URL.Path
+		}
 		method := r.Method
-		status := strconv.Itoa(rw.StatusCode)
+		status := strconv.Itoa(rw.statusCode)
 
 		httpRequestsTotal.WithLabelValues(method, path, status).Inc()
 		httpRequestDuration.WithLabelValues(method, path).Observe(duration)
