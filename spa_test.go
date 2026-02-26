@@ -36,13 +36,25 @@ func TestSPAHandler_FallbackToIndex(t *testing.T) {
 	}
 }
 
-func TestSPAHandler_AppPath404(t *testing.T) {
-	handler := axon.SPAHandler(testStaticFS, "testdata/static")
+func TestSPAHandler_StaticPrefix404(t *testing.T) {
+	handler := axon.SPAHandler(testStaticFS, "testdata/static", axon.WithStaticPrefix("/_app/"))
 	req := httptest.NewRequest("GET", "/_app/missing.js", nil)
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
 
 	if w.Code != 404 {
 		t.Errorf("expected 404 for missing /_app/ file, got %d", w.Code)
+	}
+}
+
+func TestSPAHandler_NoPrefix_FallbackEverywhere(t *testing.T) {
+	handler := axon.SPAHandler(testStaticFS, "testdata/static")
+	req := httptest.NewRequest("GET", "/_app/missing.js", nil)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	// Without a static prefix, even /_app/ paths fall back to index.html
+	if w.Code != 200 {
+		t.Errorf("expected 200 fallback without static prefix, got %d", w.Code)
 	}
 }
