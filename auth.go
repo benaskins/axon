@@ -172,7 +172,12 @@ func (ac *AuthClient) sweepExpired() {
 		case <-ticker.C:
 			now := time.Now()
 			ac.cache.Range(func(key, value any) bool {
-				if now.After(value.(cachedSession).expiresAt) {
+				cached, ok := value.(cachedSession)
+				if !ok {
+					ac.cache.Delete(key)
+					return true
+				}
+				if now.After(cached.expiresAt) {
 					ac.cache.Delete(key)
 				}
 				return true
@@ -219,8 +224,10 @@ func LoadClientTLSConfig() (*tls.Config, error) {
 func (ac *AuthClient) ValidateSession(sessionToken string) (*SessionInfo, error) {
 	// Check cache first
 	if entry, ok := ac.cache.Load(sessionToken); ok {
-		cached := entry.(cachedSession)
-		if time.Now().Before(cached.expiresAt) {
+		cached, valid := entry.(cachedSession)
+		if !valid {
+			ac.cache.Delete(sessionToken)
+		} else if time.Now().Before(cached.expiresAt) {
 			return &SessionInfo{Claims: cached.claims}, nil
 		}
 		ac.cache.Delete(sessionToken)
