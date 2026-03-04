@@ -12,6 +12,7 @@ func StandardMiddleware(handler http.Handler) http.Handler {
 	chain := alice.New(
 		RequestLogging,
 		RequestMetrics,
+		MetaHeaders,
 	)
 
 	return chain.Then(handler)
