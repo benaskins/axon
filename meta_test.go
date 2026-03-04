@@ -1,6 +1,7 @@
 package axon
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -60,6 +61,49 @@ func TestMetaMiddleware_IgnoresNonAxonHeaders(t *testing.T) {
 
 	if gotMeta != "" {
 		t.Errorf("expected empty meta for non-axon header, got %q", gotMeta)
+	}
+}
+
+func TestMetaMiddleware_EmptyHeaderValue(t *testing.T) {
+	var gotRunID string
+
+	handler := MetaHeaders(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotRunID = Meta(r.Context(), "run-id")
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("X-Axon-Run-Id", "")
+
+	handler.ServeHTTP(httptest.NewRecorder(), req)
+
+	if gotRunID != "" {
+		t.Errorf("expected empty run-id for empty header value, got %q", gotRunID)
+	}
+}
+
+func TestMeta_BareContext(t *testing.T) {
+	ctx := context.Background()
+	got := Meta(ctx, "run-id")
+	if got != "" {
+		t.Errorf("expected empty string from bare context, got %q", got)
+	}
+}
+
+func TestRunID_AbsentHeader(t *testing.T) {
+	var gotRunID string
+
+	handler := MetaHeaders(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotRunID = RunID(r.Context())
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	// No X-Axon-Run-Id header set
+	handler.ServeHTTP(httptest.NewRecorder(), req)
+
+	if gotRunID != "" {
+		t.Errorf("expected empty run-id when header absent, got %q", gotRunID)
 	}
 }
 

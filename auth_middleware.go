@@ -2,6 +2,7 @@ package axon
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"net/http"
 )
@@ -72,7 +73,7 @@ func RequireAuth(sv SessionValidator, opts ...AuthOption) func(http.Handler) htt
 			session, err := sv.ValidateSession(token)
 			if err != nil {
 				slog.Warn("auth: session validation failed", "path", r.URL.Path, "error", err)
-				if err == ErrServiceUnavailable {
+				if errors.Is(err, ErrServiceUnavailable) {
 					slog.Error("auth service unavailable during request")
 					WriteError(w, http.StatusServiceUnavailable, "auth service unavailable")
 					return

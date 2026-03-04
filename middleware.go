@@ -10,9 +10,9 @@ import (
 // RequestLogging -> RequestMetrics -> handler
 func StandardMiddleware(handler http.Handler) http.Handler {
 	chain := alice.New(
+		MetaHeaders,
 		RequestLogging,
 		RequestMetrics,
-		MetaHeaders,
 	)
 
 	return chain.Then(handler)
