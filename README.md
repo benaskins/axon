@@ -111,4 +111,4 @@ Runs: build, vet, test (race detector), gosec, staticcheck, govulncheck.
 
 ## License
 
-Apache 2.0 — see [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE).
