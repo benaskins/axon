@@ -1,6 +1,6 @@
 # axon
 
-A Go toolkit for building AI-powered web services.
+A Go toolkit for building AI-powered web services. Part of [lamina](https://github.com/benaskins/lamina) — each axon package can be used independently.
 
 Axon provides the common building blocks for HTTP services that work with AI models: server lifecycle, auth, database management, metrics, SSE streaming, and token stream filtering.
 
