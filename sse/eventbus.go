@@ -5,6 +5,14 @@ import (
 	"sync"
 )
 
+// Publisher defines the interface for event pub/sub systems.
+// Both the in-memory EventBus and NATSEventBus implement this interface.
+type Publisher[T any] interface {
+	Subscribe(clientID string) <-chan T
+	Unsubscribe(clientID string)
+	Publish(ev T)
+}
+
 // EventBus is a generic in-memory pub/sub for delivering async events to SSE clients.
 type EventBus[T any] struct {
 	mu   sync.Mutex
