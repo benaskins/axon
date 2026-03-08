@@ -1,22 +1,47 @@
 # axon
 
-A Go toolkit for building AI-powered web services. Part of [lamina](https://github.com/benaskins/lamina) — each axon package can be used independently.
+> Toolkit · Part of the [lamina](https://github.com/benaskins/lamina-mono) workspace
 
-Axon provides the common building blocks for HTTP services that work with AI models: server lifecycle, auth, database management, metrics, SSE streaming, and token stream filtering.
+Go toolkit for building LLM-powered web services. Provides HTTP server lifecycle, auth, database management, metrics, SSE streaming, and token stream filtering. Each package can be used independently.
 
-## Install
+## Getting started
 
 ```
 go get github.com/benaskins/axon@latest
 ```
 
-Requires Go 1.24+.
+A minimal service with a health endpoint and graceful shutdown:
+
+```go
+package main
+
+import (
+	"context"
+	"log/slog"
+	"net/http"
+	"time"
+
+	"github.com/benaskins/axon"
+)
+
+func main() {
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /health", axon.HealthHandler(nil))
+
+	axon.ListenAndServe("8080", mux,
+		axon.WithDrainTimeout(10*time.Second),
+		axon.WithShutdownHook(func(ctx context.Context) {
+			slog.Info("cleanup complete")
+		}),
+	)
+}
+```
 
 ## Packages
 
 ### `axon` — Core service toolkit
 
-**Server lifecycle** — Graceful shutdown with SIGINT/SIGTERM, shutdown hooks, configurable drain and hook timeouts.
+**Server lifecycle** — `ListenAndServe` with graceful shutdown (SIGINT/SIGTERM), shutdown hooks, configurable drain and hook timeouts.
 
 ```go
 axon.ListenAndServe("8080", mux,
@@ -63,11 +88,11 @@ mux.Handle("/", axon.SPAHandler(staticFS, "build",
 
 ```go
 handler := axon.StandardMiddleware(mux) // logging + Prometheus metrics
-axon.MustLoadConfig(&cfg)               // env vars → struct
+axon.MustLoadConfig(&cfg)               // env vars -> struct
 mux.HandleFunc("/health", axon.HealthHandler(db))
 ```
 
-### `sse` — Server-Sent Events
+### `sse/` — Server-Sent Events
 
 ```go
 sse.SetSSEHeaders(w)
@@ -78,9 +103,9 @@ ch := bus.Subscribe("client-1")
 bus.Publish(Event{Type: "update"})
 ```
 
-### `stream` — AI model stream filtering
+### `stream/` — LLM stream filtering
 
-Buffered token filter with lookahead for processing AI model output in real time.
+Buffered token filter with lookahead for processing LLM output in real time.
 
 ```go
 filter := stream.NewStreamFilter(
@@ -95,20 +120,6 @@ for token := range tokens {
 }
 ```
 
-## CI
-
-```bash
-# Install tools (one-time)
-go install github.com/securego/gosec/v2/cmd/gosec@latest
-go install honnef.co/go/tools/cmd/staticcheck@latest
-go install golang.org/x/vuln/cmd/govulncheck@latest
-
-# Run all checks
-./scripts/ci.sh
-```
-
-Runs: build, vet, test (race detector), gosec, staticcheck, govulncheck.
-
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT
