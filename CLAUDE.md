@@ -26,7 +26,7 @@ Core HTTP service building blocks:
 - **Server lifecycle** (`server.go`) — `ListenAndServe` with graceful shutdown (SIGINT/SIGTERM), functional options (`WithShutdownHook`, `WithDrainTimeout`, `WithHookTimeout`, `WithTLSConfig`). Shutdown runs hooks (with hookTimeout) then drains connections (with drainTimeout).
 - **Auth** (`auth.go`, `auth_middleware.go`) — `SessionValidator` interface with `AuthClient` implementation. `AuthClient` validates sessions against a remote service, configurable via `AuthClientOption`: `WithEndpointPath`, `WithTokenSender`, `WithDecodeFunc`, `WithCacheTTL`. `NewAuthClient` (mTLS, returns error) and `NewAuthClientPlain` (plain HTTP). `RequireAuth` middleware accepts `SessionValidator`, extracts `SessionInfo` into context. Options: `WithCookieName`, `WithTokenExtractor`.
 - **SessionInfo** — Claims-based: `SessionInfo.Claims` map with `UserID()`, `Username()`, `Claim(key)` accessors. Context helpers: `UserID(ctx)`, `Username(ctx)`, `Session(ctx)`.
-- **Database** (`db.go`) — `OpenDB`/`MustOpenDB` with PostgreSQL schema isolation using `pq.QuoteIdentifier`; `RunMigrations` (returns error) / `MustRunMigrations` with goose embedded FS; `OpenTestDB` creates unique schemas per test
+- **Database** (`db.go`) — `OpenDB`/`MustOpenDB` with PostgreSQL schema isolation using `pgx.Identifier{}.Sanitize()`; `RunMigrations` (returns error) / `MustRunMigrations` with goose embedded FS; `OpenTestDB` creates unique schemas per test
 - **Config** (`config.go`) — `MustLoadConfig` parses env vars via `caarlos0/env` struct tags
 - **Middleware** (`middleware.go`) — `StandardMiddleware` chains logging + Prometheus metrics via alice. Metrics use `r.Pattern` (Go 1.22+) to avoid high-cardinality labels.
 - **SPA** (`spa.go`) — `SPAHandler(files, subdir, opts...)` serves embedded static files with client-side routing fallback. Use `WithStaticPrefix(prefix)` to 404 on missing assets under that prefix instead of falling back to index.html.
@@ -53,4 +53,4 @@ Core HTTP service building blocks:
 
 ## Dependencies
 
-caarlos0/env (config), justinas/alice (middleware chaining), lib/pq (postgres), pressly/goose (migrations), prometheus/client_golang (metrics)
+caarlos0/env (config), justinas/alice (middleware chaining), jackc/pgx (postgres), pressly/goose (migrations), prometheus/client_golang (metrics)
