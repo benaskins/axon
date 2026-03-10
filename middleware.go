@@ -7,7 +7,10 @@ import (
 )
 
 // StandardMiddleware wraps a handler with the standard middleware stack:
-// RequestLogging -> RequestMetrics -> handler
+// MetaHeaders (outermost) -> RequestLogging -> RequestMetrics -> handler
+//
+// MetaHeaders runs first so that X-Axon-Run-Id and X-Axon-Trace-Id are
+// available in context for downstream logging and metrics middleware.
 func StandardMiddleware(handler http.Handler) http.Handler {
 	chain := alice.New(
 		MetaHeaders,

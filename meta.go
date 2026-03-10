@@ -24,7 +24,11 @@ func MetaHeaders(next http.Handler) http.Handler {
 		for name, values := range r.Header {
 			if strings.HasPrefix(name, headerPrefix) && len(values) > 0 {
 				// Normalise Go's canonical "Run-Id" to "run-id"
-			key := strings.ToLower(name[len(headerPrefix):])
+				key := strings.ToLower(name[len(headerPrefix):])
+				// Skip empty keys (bare "X-Axon-" prefix) and empty values
+				if key == "" || values[0] == "" {
+					continue
+				}
 				meta[key] = values[0]
 			}
 		}
