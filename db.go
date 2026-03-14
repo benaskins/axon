@@ -4,9 +4,10 @@ import (
 	"database/sql"
 	"embed"
 	"fmt"
+	"io"
+	"log"
 	"log/slog"
 	"net/url"
-	"os"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -16,12 +17,11 @@ import (
 
 // MustOpenDB opens a PostgreSQL connection, creates the schema if needed,
 // sets the search_path, and pings to verify connectivity.
-// Exits the process on failure.
+// Panics on failure.
 func MustOpenDB(dsn, schema string) *sql.DB {
 	db, err := OpenDB(dsn, schema)
 	if err != nil {
-		slog.Error("failed to open database", "error", err, "schema", schema)
-		os.Exit(1)
+		panic(fmt.Sprintf("axon: open database (schema %s): %v", schema, err))
 	}
 	return db
 }
@@ -84,6 +84,7 @@ func appendSearchPath(dsn, schema string) string {
 // (e.g., //go:embed migrations/*.sql).
 func RunMigrations(db *sql.DB, migrationsFS embed.FS) error {
 	goose.SetBaseFS(migrationsFS)
+	goose.SetLogger(log.New(io.Discard, "", 0))
 
 	if err := goose.SetDialect("postgres"); err != nil {
 		return fmt.Errorf("set goose dialect: %w", err)
@@ -97,10 +98,9 @@ func RunMigrations(db *sql.DB, migrationsFS embed.FS) error {
 	return nil
 }
 
-// MustRunMigrations runs goose SQL migrations and exits the process on failure.
+// MustRunMigrations runs goose SQL migrations. Panics on failure.
 func MustRunMigrations(db *sql.DB, migrationsFS embed.FS) {
 	if err := RunMigrations(db, migrationsFS); err != nil {
-		slog.Error("failed to run migrations", "error", err)
-		os.Exit(1)
+		panic(fmt.Sprintf("axon: run migrations: %v", err))
 	}
 }
