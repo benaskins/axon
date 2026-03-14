@@ -1,18 +1,24 @@
 package axon
 
 import (
-	"log/slog"
-	"os"
+	"fmt"
 
 	"github.com/caarlos0/env/v11"
 )
 
-// MustLoadConfig parses environment variables into the provided struct.
+// LoadConfig parses environment variables into the provided struct.
 // The struct should use `env` and `envDefault` tags from caarlos0/env.
-// Exits the process if parsing fails.
-func MustLoadConfig(cfg any) {
+func LoadConfig(cfg any) error {
 	if err := env.Parse(cfg); err != nil {
-		slog.Error("failed to parse config", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("parse config: %w", err)
+	}
+	return nil
+}
+
+// MustLoadConfig parses environment variables into the provided struct.
+// Panics on failure.
+func MustLoadConfig(cfg any) {
+	if err := LoadConfig(cfg); err != nil {
+		panic(fmt.Sprintf("axon: %v", err))
 	}
 }
