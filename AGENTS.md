@@ -1,0 +1,56 @@
+# axon
+
+This file provides guidance when working with code in this repository.
+
+## Build & Test Commands
+
+```bash
+go test ./...              # Run all tests (3 packages)
+go test .                  # Root package tests only
+go test ./sse              # SSE package tests only
+go test ./stream           # Stream package tests only
+go test -run TestName ./   # Run a single test
+go test -v ./...           # Verbose output
+go fmt ./...               # Format
+go vet ./...               # Lint
+```
+
+No Makefile — standard Go tooling only. Go 1.24.1.
+
+## Architecture
+
+Axon is a Go toolkit for building AI-powered web services. Single module (`github.com/benaskins/axon`) with three packages:
+
+### Root package (`axon`)
+Core HTTP service building blocks:
+- **Server lifecycle** (`server.go`) — `ListenAndServe` with graceful shutdown (SIGINT/SIGTERM), functional options (`WithShutdownHook`, `WithDrainTimeout`, `WithHookTimeout`, `WithTLSConfig`). Shutdown runs hooks (with hookTimeout) then drains connections (with drainTimeout).
+- **Auth** (`auth.go`, `auth_middleware.go`) — `SessionValidator` interface with `AuthClient` implementation. `AuthClient` validates sessions against a remote service, configurable via `AuthClientOption`: `WithEndpointPath`, `WithTokenSender`, `WithDecodeFunc`, `WithCacheTTL`. `NewAuthClient` (mTLS, returns error) and `NewAuthClientPlain` (plain HTTP). `RequireAuth` middleware accepts `SessionValidator`, extracts `SessionInfo` into context. Options: `WithCookieName`, `WithTokenExtractor`.
+- **SessionInfo** — Claims-based: `SessionInfo.Claims` map with `UserID()`, `Username()`, `Claim(key)` accessors. Context helpers: `UserID(ctx)`, `Username(ctx)`, `Session(ctx)`.
+- **Database** (`db.go`) — `OpenDB`/`MustOpenDB` with PostgreSQL schema isolation using `pgx.Identifier{}.Sanitize()`; `RunMigrations` (returns error) / `MustRunMigrations` with goose embedded FS; `OpenTestDB` creates unique schemas per test
+- **Config** (`config.go`) — `MustLoadConfig` parses env vars via `caarlos0/env` struct tags
+- **Middleware** (`middleware.go`) — `StandardMiddleware` chains logging + Prometheus metrics via alice. Metrics use `r.Pattern` (Go 1.22+) to avoid high-cardinality labels.
+- **SPA** (`spa.go`) — `SPAHandler(files, subdir, opts...)` serves embedded static files with client-side routing fallback. Use `WithStaticPrefix(prefix)` to 404 on missing assets under that prefix instead of falling back to index.html.
+- **Helpers** — `WriteJSON`/`WriteError` (response.go, logs encoding errors), `ValidateSlug` (slug.go), `HealthHandler` (health.go, returns 503 on db failure)
+
+### `sse/` — Server-Sent Events
+- `SetSSEHeaders`/`SendEvent` — SSE protocol helpers
+- `EventBus[T]` — Generic in-memory pub/sub with buffered channels; copies subscriber map before sending to avoid lock contention
+
+### `stream/` — AI Model Stream Filtering
+- `StreamFilter` — Buffered token filter with lookahead; feeds tokens through matchers before emitting
+- `ToolCallMatcher` — Detects JSON tool calls in streamed text (objects, arrays, fenced code blocks)
+- `ContentSafetyMatcher` — Regex-based blocked pattern detection with cross-boundary overlap
+
+## Key Patterns
+
+- **Functional options** for configuration: `ServerOption`, `AuthClientOption`, `AuthOption`, `SPAOption`
+- **SessionValidator interface** for auth: implement `ValidateSession(token string) (*SessionInfo, error)`
+- **Matcher interface** in stream package: `Scan(buf, prevTail) MatchResult` + optional `Extractable` for data extraction
+- **Context keys** for auth: `UserID(ctx)`, `Username(ctx)`, `Session(ctx)` for full `*SessionInfo`
+- **Schema-per-test** database isolation via `OpenTestDB`
+- **`embed.FS`** for both migrations and SPA static files
+- **responseWriter** (unexported) wraps http.ResponseWriter to capture status codes for logging/metrics
+
+## Dependencies
+
+caarlos0/env (config), justinas/alice (middleware chaining), jackc/pgx (postgres), pressly/goose (migrations), prometheus/client_golang (metrics)
