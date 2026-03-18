@@ -18,6 +18,7 @@ type serverConfig struct {
 	tlsKey        string
 	drainTimeout  time.Duration
 	hookTimeout   time.Duration
+	healthChecks  []HealthCheck
 }
 
 // ServerOption configures ListenAndServe behavior.
@@ -77,7 +78,7 @@ func ListenAndServe(port string, handler http.Handler, opts ...ServerOption) {
 
 	srv := &http.Server{
 		Addr:              ":" + port,
-		Handler:           WrapHandler(handler),
+		Handler:           WrapHandler(handler, cfg.healthChecks...),
 		TLSConfig:         cfg.tlsConfig,
 		ReadHeaderTimeout: 10 * time.Second,
 	}

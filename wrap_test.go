@@ -2,6 +2,7 @@ package axon_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -106,5 +107,70 @@ func TestWrapHandler_HealthEndpointNotOverridable(t *testing.T) {
 	json.Unmarshal(w.Body.Bytes(), &body)
 	if body["status"] != "ok" {
 		t.Errorf("expected auto-wired health (status=ok), got %v", body["status"])
+	}
+}
+
+func TestWrapHandler_WithHealthChecks(t *testing.T) {
+	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
+
+	handler := axon.WrapHandler(inner,
+		axon.HealthCheck{Name: "postgres", Check: func() error { return nil }},
+		axon.HealthCheck{Name: "nats", Check: func() error { return nil }},
+	)
+
+	req := httptest.NewRequest("GET", "/health", nil)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != 200 {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+
+	var body map[string]any
+	json.Unmarshal(w.Body.Bytes(), &body)
+	if body["status"] != "ok" {
+		t.Errorf("expected status=ok, got %v", body["status"])
+	}
+	checks, ok := body["checks"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected checks map, got %T", body["checks"])
+	}
+	if checks["postgres"] != "ok" {
+		t.Errorf("postgres = %v, want ok", checks["postgres"])
+	}
+	if checks["nats"] != "ok" {
+		t.Errorf("nats = %v, want ok", checks["nats"])
+	}
+}
+
+func TestWrapHandler_HealthCheckFails(t *testing.T) {
+	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
+
+	handler := axon.WrapHandler(inner,
+		axon.HealthCheck{Name: "postgres", Check: func() error { return nil }},
+		axon.HealthCheck{Name: "redis", Check: func() error {
+			return fmt.Errorf("connection refused")
+		}},
+	)
+
+	req := httptest.NewRequest("GET", "/health", nil)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != 503 {
+		t.Errorf("expected 503, got %d", w.Code)
+	}
+
+	var body map[string]any
+	json.Unmarshal(w.Body.Bytes(), &body)
+	if body["status"] != "unhealthy" {
+		t.Errorf("expected status=unhealthy, got %v", body["status"])
+	}
+	checks := body["checks"].(map[string]any)
+	if checks["postgres"] != "ok" {
+		t.Errorf("postgres = %v, want ok", checks["postgres"])
+	}
+	if checks["redis"] != "connection refused" {
+		t.Errorf("redis = %v, want connection refused", checks["redis"])
 	}
 }
