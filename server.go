@@ -76,9 +76,9 @@ func ListenAndServe(port string, handler http.Handler, opts ...ServerOption) {
 	}
 
 	srv := &http.Server{
-		Addr:             ":" + port,
-		Handler:          handler,
-		TLSConfig:        cfg.tlsConfig,
+		Addr:              ":" + port,
+		Handler:           WrapHandler(handler),
+		TLSConfig:         cfg.tlsConfig,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
