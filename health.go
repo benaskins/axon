@@ -6,9 +6,8 @@ import (
 	"net/http"
 )
 
-// HealthHandler returns a health check handler.
-// If db is non-nil, includes database connectivity status.
-// Returns 503 when the database ping fails.
+// Deprecated: HealthHandler is superseded by WithHealthCheck which registers
+// named health checks with ListenAndServe.
 func HealthHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		resp := map[string]string{"status": "healthy"}

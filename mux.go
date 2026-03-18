@@ -5,8 +5,8 @@ import (
 	"net/http"
 )
 
-// NewServiceMux returns an http.ServeMux pre-wired with /health and /metrics
-// endpoints. Services add their own routes to the returned mux.
+// Deprecated: NewServiceMux is superseded by ListenAndServe which auto-wires
+// /health and /metrics. Use WithHealthCheck for database health checks.
 func NewServiceMux(db *sql.DB) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", HealthHandler(db))
