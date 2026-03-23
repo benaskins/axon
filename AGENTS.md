@@ -15,7 +15,7 @@ go fmt ./...               # Format
 go vet ./...               # Lint
 ```
 
-No Makefile — standard Go tooling only. Go 1.24.1.
+No Makefile — standard Go tooling only. Go 1.26.1.
 
 ## Architecture
 
@@ -28,9 +28,15 @@ Core HTTP service building blocks:
 - **SessionInfo** — Claims-based: `SessionInfo.Claims` map with `UserID()`, `Username()`, `Claim(key)` accessors. Context helpers: `UserID(ctx)`, `Username(ctx)`, `Session(ctx)`.
 - **Database** (`db.go`) — `OpenDB`/`MustOpenDB` with PostgreSQL schema isolation using `pgx.Identifier{}.Sanitize()`; `RunMigrations` (returns error) / `MustRunMigrations` with goose embedded FS; `OpenTestDB` creates unique schemas per test
 - **Config** (`config.go`) — `MustLoadConfig` parses env vars via `caarlos0/env` struct tags
-- **Middleware** (`middleware.go`) — `StandardMiddleware` chains logging + Prometheus metrics via alice. Metrics use `r.Pattern` (Go 1.22+) to avoid high-cardinality labels.
+- **Middleware** (`middleware.go`) — `StandardMiddleware` chains logging + OTel/Prometheus metrics via alice. Deprecated: applied automatically by `ListenAndServe`. Metrics use `r.Pattern` (Go 1.22+) to avoid high-cardinality labels.
+- **Metrics** (`metrics.go`) — OTel instruments (histogram, counter) exported as Prometheus metrics. `MeterProvider()` lets domain packages create their own meters. `MetricsHandler()` serves Prometheus exposition format.
+- **Handler wrapping** (`wrap.go`) — `WrapHandler` auto-wires `/health` and `/metrics` routes. `WithHealthCheck` registers named health checks with `ListenAndServe`.
+- **Meta headers** (`meta.go`) — `MetaHeaders` middleware extracts `X-Axon-*` headers into context. `Meta(ctx, key)` and `RunID(ctx)` accessors.
+- **Request decoding** (`request.go`) — `DecodeJSON[T]` decodes + validates request bodies (1MB limit). `Validatable` interface for auto-validation.
+- **HTTP client** (`client.go`) — `StatusError` type for unexpected HTTP status codes. `IsStatusError` helper.
+- **Errors** (`errors.go`) — Sentinel errors: `ErrUnauthorized`, `ErrNotFound`, `ErrServiceUnavailable`.
 - **SPA** (`spa.go`) — `SPAHandler(files, subdir, opts...)` serves embedded static files with client-side routing fallback. Use `WithStaticPrefix(prefix)` to 404 on missing assets under that prefix instead of falling back to index.html.
-- **Helpers** — `WriteJSON`/`WriteError` (response.go, logs encoding errors), `ValidateSlug` (slug.go), `HealthHandler` (health.go, returns 503 on db failure)
+- **Helpers** — `WriteJSON`/`WriteError` (response.go, logs encoding errors), `ValidateSlug` (slug.go), `HealthHandler` (health.go, deprecated — use `WithHealthCheck`)
 
 ### `sse/` — Server-Sent Events
 - `SetSSEHeaders`/`SendEvent` — SSE protocol helpers
@@ -53,4 +59,4 @@ Core HTTP service building blocks:
 
 ## Dependencies
 
-caarlos0/env (config), justinas/alice (middleware chaining), jackc/pgx (postgres), pressly/goose (migrations), prometheus/client_golang (metrics)
+caarlos0/env (config), justinas/alice (middleware chaining), jackc/pgx (postgres), pressly/goose (migrations), OTel SDK + prometheus exporter (metrics)

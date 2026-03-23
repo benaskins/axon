@@ -10,7 +10,7 @@ Go toolkit for building LLM-powered web services. Provides HTTP server lifecycle
 go get github.com/benaskins/axon@latest
 ```
 
-A minimal service with a health endpoint and graceful shutdown:
+A minimal service with health checks and graceful shutdown:
 
 ```go
 package main
@@ -26,7 +26,9 @@ import (
 
 func main() {
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /health", axon.HealthHandler(nil))
+	mux.HandleFunc("GET /hello", func(w http.ResponseWriter, r *http.Request) {
+		axon.WriteJSON(w, http.StatusOK, map[string]string{"msg": "hello"})
+	})
 
 	axon.ListenAndServe("8080", mux,
 		axon.WithDrainTimeout(10*time.Second),
@@ -84,12 +86,19 @@ mux.Handle("/", axon.SPAHandler(staticFS, "build",
 ))
 ```
 
-**Middleware, config, and helpers:**
+**Health checks** — `ListenAndServe` auto-wires `/health` and `/metrics`. Add named checks with `WithHealthCheck`:
 
 ```go
-handler := axon.StandardMiddleware(mux) // logging + Prometheus metrics
+axon.ListenAndServe("8080", mux,
+    axon.WithHealthCheck("database", func() error { return db.Ping() }),
+)
+```
+
+**Config and helpers:**
+
+```go
 axon.MustLoadConfig(&cfg)               // env vars -> struct
-mux.HandleFunc("/health", axon.HealthHandler(db))
+axon.DecodeJSON[MyRequest](w, r)        // decode + validate request body
 ```
 
 ### `sse/` — Server-Sent Events
