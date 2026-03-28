@@ -1,0 +1,27 @@
+name: axon
+purpose: HTTP server lifecycle, config, auth, SSE, metrics
+use_when: Any HTTP service
+deterministic: true
+snippet:
+  imports:
+    - path: log/slog
+    - path: net/http
+    - path: os
+    - path: github.com/benaskins/axon
+  requires:
+    - github.com/benaskins/axon
+  setup: |
+    port := os.Getenv("PORT")
+    if port == "" {
+      port = "8080"
+    }
+
+    mux := http.NewServeMux()
+    mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
+      w.WriteHeader(http.StatusOK)
+    })
+  helpers: |
+    func serve(port string, mux *http.ServeMux) {
+      slog.Info("serving", "port", port)
+      axon.ListenAndServe(port, axon.StandardMiddleware(mux))
+    }
