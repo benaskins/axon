@@ -11,9 +11,9 @@ import (
 
 func main() {
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /health", axon.HealthHandler(nil))
 
 	axon.ListenAndServe("8080", mux,
+		axon.WithHealthCheck("example", func() error { return nil }),
 		axon.WithDrainTimeout(10*time.Second),
 		axon.WithShutdownHook(func(ctx context.Context) {
 			slog.Info("cleanup complete")

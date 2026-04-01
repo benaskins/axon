@@ -83,12 +83,12 @@ func coerceToString(v any) any {
 }
 
 func coerceToArray(v any) any {
-	switch v.(type) {
+	switch v := v.(type) {
 	case []any:
 		return v
 	case string:
 		var arr []any
-		if json.Unmarshal([]byte(v.(string)), &arr) == nil {
+		if json.Unmarshal([]byte(v), &arr) == nil {
 			return arr
 		}
 	}
@@ -96,12 +96,12 @@ func coerceToArray(v any) any {
 }
 
 func coerceToObject(v any) any {
-	switch v.(type) {
+	switch v := v.(type) {
 	case map[string]any:
 		return v
 	case string:
 		var obj map[string]any
-		if json.Unmarshal([]byte(v.(string)), &obj) == nil {
+		if json.Unmarshal([]byte(v), &obj) == nil {
 			return obj
 		}
 	}
