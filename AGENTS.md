@@ -31,7 +31,6 @@ Core HTTP service building blocks:
 - **Server lifecycle** (`server.go`) -- `ListenAndServe` with graceful shutdown (SIGINT/SIGTERM), functional options (`WithShutdownHook`, `WithDrainTimeout`, `WithHookTimeout`, `WithTLSConfig`). Shutdown runs hooks (with hookTimeout) then drains connections (with drainTimeout).
 - **Auth** (`auth.go`, `auth_middleware.go`) -- `SessionValidator` interface with `AuthClient` implementation. `AuthClient` validates sessions against a remote service, configurable via `AuthClientOption`: `WithEndpointPath`, `WithTokenSender`, `WithDecodeFunc`, `WithCacheTTL`. `NewAuthClient` (mTLS, returns error) and `NewAuthClientPlain` (plain HTTP). `RequireAuth` middleware accepts `SessionValidator`, extracts `SessionInfo` into context. Options: `WithCookieName`, `WithTokenExtractor`.
 - **SessionInfo** -- Claims-based: `SessionInfo.Claims` map with `UserID()`, `Username()`, `Claim(key)` accessors. Context helpers: `UserID(ctx)`, `Username(ctx)`, `Session(ctx)`.
-- **Database** (`db.go`) -- `OpenDB`/`MustOpenDB` with PostgreSQL schema isolation using `pgx.Identifier{}.Sanitize()`; `RunMigrations` (returns error) / `MustRunMigrations` with goose embedded FS; `OpenTestDB` creates unique schemas per test
 - **Config** (`config.go`) -- `MustLoadConfig` parses env vars via `caarlos0/env` struct tags
 - **Middleware** (`middleware.go`) -- `StandardMiddleware` chains logging + OTel/Prometheus metrics via alice. Deprecated: applied automatically by `ListenAndServe`. Metrics use `r.Pattern` (Go 1.22+) to avoid high-cardinality labels.
 - **Metrics** (`metrics.go`) -- OTel instruments (histogram, counter) exported as Prometheus metrics. `MeterProvider()` lets domain packages create their own meters. `MetricsHandler()` serves Prometheus exposition format.
@@ -58,10 +57,9 @@ Core HTTP service building blocks:
 - **SessionValidator interface** for auth: implement `ValidateSession(token string) (*SessionInfo, error)`
 - **Matcher interface** in stream package: `Scan(buf, prevTail) MatchResult` + optional `Extractable` for data extraction
 - **Context keys** for auth: `UserID(ctx)`, `Username(ctx)`, `Session(ctx)` for full `*SessionInfo`
-- **Schema-per-test** database isolation via `OpenTestDB`
-- **`embed.FS`** for both migrations and SPA static files
+- **`embed.FS`** for SPA static files
 - **responseWriter** (unexported) wraps http.ResponseWriter to capture status codes for logging/metrics
 
 ## Dependencies
 
-caarlos0/env (config), justinas/alice (middleware chaining), jackc/pgx (postgres), pressly/goose (migrations), OTel SDK + prometheus exporter (metrics)
+caarlos0/env (config), justinas/alice (middleware chaining), jackc/pgx (postgres, used by health.go and mux.go), OTel SDK + prometheus exporter (metrics). Database management (pool, migrations) moved to axon-base.

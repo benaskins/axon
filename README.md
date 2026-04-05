@@ -2,7 +2,7 @@
 
 > Toolkit · Part of the [lamina](https://github.com/benaskins/lamina-mono) workspace
 
-Go toolkit for building LLM-powered web services. Provides HTTP server lifecycle, auth, database management, metrics, SSE streaming, and token stream filtering. Each package can be used independently.
+Go toolkit for building LLM-powered web services. Provides HTTP server lifecycle, auth, metrics, SSE streaming, and token stream filtering. Each package can be used independently. Database management is handled by [axon-base](https://github.com/benaskins/axon-base).
 
 ## Getting started
 
@@ -68,14 +68,12 @@ session := axon.Session(r.Context())
 role := session.Claim("role")
 ```
 
-**Database** — PostgreSQL with schema isolation, goose migrations from embedded FS, and per-test schemas.
+**Database** — Use [axon-base](https://github.com/benaskins/axon-base) for PostgreSQL pool, migrations, and repository patterns.
 
 ```go
-db := axon.MustOpenDB(dsn, "myapp")
-axon.MustRunMigrations(db, migrationsFS)
-
-// In tests:
-db := axon.OpenTestDB(t, dsn, migrationsFS)
+p, _ := pool.NewPool(ctx, dsn, "myapp")
+db, _ := p.StdDB()
+migration.Run(db, migrationsFS, "migrations")
 ```
 
 **SPA** — Serve embedded static files with client-side routing fallback.

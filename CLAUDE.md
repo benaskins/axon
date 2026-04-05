@@ -5,7 +5,7 @@
 - OTel metrics are auto-wired via `ListenAndServe` — do not add manual metric middleware
 - `StandardMiddleware` is deprecated; `ListenAndServe` applies it automatically
 - `HealthHandler` is deprecated; use `WithHealthCheck` option instead
-- Schema-per-test isolation via `OpenTestDB` — never share test databases
+- Database management (pool, migrations, test helpers) lives in axon-base, not here
 
 ## Constraints
 - Never add dependencies on any axon-* module — axon is the foundation layer
@@ -16,4 +16,4 @@
 ## Testing
 - `go test ./...` covers root, `sse/`, and `stream/` packages
 - Stream matcher tests use deterministic token sequences — no network required
-- Database tests require `AXON_TEST_DSN` or are skipped automatically
+- No database tests in axon (moved to axon-base)
