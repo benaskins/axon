@@ -8,4 +8,7 @@
 // observability. ListenAndServe handles the long-running server lifecycle;
 // callers running on FaaS adapters can skip it and mount the wrapped
 // handler directly.
+//
+// Class: platform
+// UseWhen: HTTP services only. CLI tools do not need axon.
 package axon
