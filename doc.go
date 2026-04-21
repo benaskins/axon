@@ -3,4 +3,7 @@
 // It includes HTTP server lifecycle, configuration, database management,
 // health checks, Prometheus metrics, request logging, auth middleware,
 // SPA static file serving, and slug validation.
+//
+// Class: platform
+// UseWhen: HTTP services only. CLI tools do not need axon.
 package axon
