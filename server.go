@@ -18,7 +18,6 @@ type serverConfig struct {
 	tlsKey        string
 	drainTimeout  time.Duration
 	hookTimeout   time.Duration
-	healthChecks  []HealthCheck
 }
 
 // ServerOption configures ListenAndServe behavior.
@@ -67,6 +66,9 @@ func WithHookTimeout(d time.Duration) ServerOption {
 
 // ListenAndServe starts an HTTP server and blocks until SIGINT or SIGTERM.
 // Performs graceful shutdown: runs shutdown hooks, then drains connections.
+//
+// The handler should already be wrapped by AppHandler (or equivalent) — this
+// function only owns the server lifecycle, not observability.
 func ListenAndServe(port string, handler http.Handler, opts ...ServerOption) {
 	cfg := &serverConfig{
 		drainTimeout: 30 * time.Second,
@@ -78,7 +80,7 @@ func ListenAndServe(port string, handler http.Handler, opts ...ServerOption) {
 
 	srv := &http.Server{
 		Addr:              ":" + port,
-		Handler:           WrapHandler(handler, cfg.healthChecks...),
+		Handler:           handler,
 		TLSConfig:         cfg.tlsConfig,
 		ReadHeaderTimeout: 10 * time.Second,
 	}

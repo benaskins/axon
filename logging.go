@@ -34,18 +34,21 @@ func (rw *responseWriter) Flush() {
 	}
 }
 
-// RequestLogging returns middleware that logs each request with slog.
-func RequestLogging(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-		path := r.URL.Path
-		rw := wrapResponseWriter(w)
-		next.ServeHTTP(rw, r)
-		slog.Info("request",
-			"method", r.Method,
-			"path", path,
-			"status", rw.statusCode,
-			"duration", time.Since(start).String(),
-		)
-	})
+// RequestLogging returns middleware that logs each request with the given
+// logger. Pass slog.Default() if you want process-wide configuration.
+func RequestLogging(logger *slog.Logger) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			start := time.Now()
+			path := r.URL.Path
+			rw := wrapResponseWriter(w)
+			next.ServeHTTP(rw, r)
+			logger.Info("request",
+				"method", r.Method,
+				"path", path,
+				"status", rw.statusCode,
+				"duration", time.Since(start).String(),
+			)
+		})
+	}
 }
