@@ -144,7 +144,7 @@ func defaultAuthClientConfig() authClientConfig {
 	return authClientConfig{
 		endpointPath: "/api/validate",
 		tokenSender: func(req *http.Request, token string) {
-			req.AddCookie(&http.Cookie{Name: "session", Value: token})
+			req.AddCookie(&http.Cookie{Name: "session", Value: token}) // #nosec G124 -- outbound request cookie; Secure/HttpOnly/SameSite apply only to Set-Cookie response headers
 		},
 		decodeFunc: func(resp *http.Response) (map[string]any, error) {
 			var claims map[string]any
