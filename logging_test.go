@@ -1,6 +1,7 @@
 package axon_test
 
 import (
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -13,7 +14,7 @@ func TestRequestLogging_CapturesStatus(t *testing.T) {
 		w.WriteHeader(http.StatusNotFound)
 	})
 
-	handler := axon.RequestLogging(inner)
+	handler := axon.RequestLogging(slog.Default())(inner)
 	req := httptest.NewRequest("GET", "/test", nil)
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
@@ -31,7 +32,7 @@ func TestRequestLogging_FlushSupport(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	handler := axon.RequestLogging(inner)
+	handler := axon.RequestLogging(slog.Default())(inner)
 	req := httptest.NewRequest("GET", "/test", nil)
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
